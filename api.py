@@ -78,6 +78,8 @@ class User(Resource):
             })
         return tasks, 200
 
+api.add_resource(User, '/users/', '/users/<int:user_id>')
+
 
 if __name__ == '__main__':
     app.run(debug=True)
