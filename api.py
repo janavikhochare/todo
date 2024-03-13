@@ -78,7 +78,72 @@ class User(Resource):
             })
         return tasks, 200
 
+
+class Task(Resource):
+    def post(self):
+        status = authenticate_token(
+            request.form['user_id'], request.form['access_token'])
+        if status != 200:
+            return '', status
+
+        today = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        cursor = conn.execute(
+            '''
+            INSERT INTO tasks (user_id, task, datetime, priority, status)
+            VALUES (?, ?, ?, ?, ?)
+            ''', (request.form['user_id'], request.form['task'], today,
+                  request.form['priority'], request.form['status'])
+        )
+        conn.commit()
+        task_id = cursor.lastrowid
+        task = {
+            'task_id': task_id,
+            'user_id': request.form['user_id'],
+            'task': request.form['task'],
+            'datetime': today,
+            'priority': request.form['priority'],
+            'status': request.form['status']
+        }
+        return task, 201
+
+    def put(self, task_id):
+        status = authenticate_token(
+            request.form['user_id'], request.form['access_token'])
+        if status != 200:
+            return '', status
+
+        today = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        conn.execute('''
+        UPDATE tasks
+        SET task = ?, datetime = ?, priority = ?, status = ?
+        WHERE task_id = ?
+        ''', (
+            request.form['task'], today,
+            request.form['priority'], request.form['status'], task_id)
+        )
+        conn.commit()
+        task = {
+            'task_id': task_id,
+            'task': request.form['task'],
+            'datetime': today,
+            'priority': request.form['priority'],
+            'status': request.form['status']
+        }
+        return task, 200
+
+    def delete(self, task_id):
+        status = authenticate_token(
+            request.form['user_id'], request.form['access_token'])
+        if status != 200:
+            return '', status
+
+        conn.execute('DELETE FROM tasks WHERE task_id = ?', (task_id,))
+        conn.commit()
+        return '', 204
+
+
 api.add_resource(User, '/users/', '/users/<int:user_id>')
+api.add_resource(Task, '/tasks/', '/tasks/<string:task_id>')
 
 
 if __name__ == '__main__':
