@@ -7,6 +7,62 @@ from flask import Flask, request
 from flask_restful import Api, Resource
 
 
+
+####
+
+import spacy
+from spacy import displacy
+import parsedatetime as pdt
+from datetime import datetime
+
+# Load the English language model
+nlp = spacy.load("en_core_web_sm")
+
+# Create a ParseDateTime object
+cal = pdt.Calendar()
+
+# Function to preprocess the input text
+
+
+def extract_task_and_date(input_text):
+    task = ""
+    due_date = None
+
+    # Extract the due date using parsedatetime
+    time_struct, parse_status = cal.parse(input_text)
+    if parse_status:
+        due_date = datetime(*time_struct[:6])
+
+    # Extract the task using spaCy's NER and pattern matching
+    doc = nlp(input_text)
+    # search for the verb and the noun
+    # remove everything related to the date
+    doc = [token for token in doc if token.pos_ not in ("NUM", "SYM", "PUNCT", "SPACE", "DET")]
+    doc = [token for token in doc if token.ent_type_ not in ("DATE", "TIME")]
+
+    print("Tokens:", [token.text for token in doc])
+
+    for token in doc:
+        if token.pos_ == "VERB":
+            task += token.lemma_
+            break
+    for token in doc:
+        if token.pos_ == "NOUN":
+            task += " " + token.lemma_
+            break
+    for token in doc:
+        if token.pos_ == "ADP":
+            task += " " + token.lemma_
+            break
+    for token in doc:
+        if token.pos_ == "PROPN" and token.ent_type_ == "PERSON":
+            task += " " + token.lemma_
+            break
+
+    return task.strip(), due_date
+
+####
+
 app = Flask(__name__)
 api = Api(app)
 
@@ -87,20 +143,25 @@ class Task(Resource):
             return '', status
 
         today = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
+        op_task, op_time = extract_task_and_date(request.form['task'])
+        op_time = op_time.strftime('%Y-%m-%d %H:%M:%S')
         cursor = conn.execute(
             '''
             INSERT INTO tasks (user_id, task, datetime, priority, status)
             VALUES (?, ?, ?, ?, ?)
-            ''', (request.form['user_id'], request.form['task'], today,
+            ''', (request.form['user_id'], op_task, op_time,
                   request.form['priority'], request.form['status'])
         )
         conn.commit()
         task_id = cursor.lastrowid
+        
+        print(op_time, op_task)
         task = {
             'task_id': task_id,
             'user_id': request.form['user_id'],
-            'task': request.form['task'],
-            'datetime': today,
+            'task': op_task,
+            'datetime': op_time,
             'priority': request.form['priority'],
             'status': request.form['status']
         }
@@ -113,19 +174,23 @@ class Task(Resource):
             return '', status
 
         today = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        op_task, op_time = extract_task_and_date(request.form['task'])
+        op_time = op_time.strftime('%Y-%m-%d %H:%M:%S')
+
         conn.execute('''
         UPDATE tasks
         SET task = ?, datetime = ?, priority = ?, status = ?
         WHERE task_id = ?
         ''', (
-            request.form['task'], today,
+            op_task, op_time,
             request.form['priority'], request.form['status'], task_id)
         )
         conn.commit()
+
         task = {
             'task_id': task_id,
-            'task': request.form['task'],
-            'datetime': today,
+            'task': op_task,
+            'datetime': op_time,
             'priority': request.form['priority'],
             'status': request.form['status']
         }
