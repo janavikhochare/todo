@@ -6,10 +6,6 @@ import sqlite3
 from flask import Flask, request
 from flask_restful import Api, Resource
 
-
-
-####
-
 import spacy
 from spacy import displacy
 import parsedatetime as pdt
