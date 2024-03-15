@@ -1,20 +1,16 @@
-# todo
-Todo App
+## Todo App
 
-## Docker
-Commands to run via Docker
-docker build -t my_flask_app .
-docker run -p 5000:5000 my_flask_app
+## Docker commands
+```
+    Commands to run via Docker
+    docker build -t my_flask_app .
+    docker run -p 5000:5000 my_flask_app
+```
 
 
 # To-Do API
 
-This is a simple Flask RESTful API for managing to-do tasks.
-
-## Prerequisites
-
-- Python 3.x
-- SQLite
+This is a simple Flask RESTful API for managing to-do tasks.s
 
 ## Installation
 
